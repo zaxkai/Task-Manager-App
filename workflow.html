@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskFlow — Task Manager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f13;
+      --surface: #1a1a22;
+      --surface2: #22222e;
+      --border: rgba(255,255,255,0.07);
+      --text: #f0eff8;
+      --muted: #8b8a9e;
+      --accent-todo: #6c6cff;
+      --accent-doing: #f5a623;
+      --accent-done: #2dc98e;
+      --font-head: 'Syne', sans-serif;
+      --font-body: 'DM Sans', sans-serif;
+    }
+
+    html, body {
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+    }
+
+    /* ── Top Bar ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 32px 16px;
+      border-bottom: 0.5px solid var(--border);
+    }
+
+    .logo {
+      font-family: var(--font-head);
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: var(--accent-todo); }
+
+    .stats { display: flex; gap: 24px; font-size: 13px; color: var(--muted); }
+    .stat-val { font-weight: 500; color: var(--text); }
+
+    /* ── Progress Bar ── */
+    .progress-bar {
+      height: 2px;
+      background: var(--border);
+      margin: 0 32px 18px;
+      border-radius: 2px;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--accent-todo), var(--accent-done));
+      transition: width 0.4s ease;
+    }
+
+    /* ── Add Bar ── */
+    .add-bar {
+      display: flex;
+      gap: 10px;
+      padding: 0 32px 20px;
+    }
+
+    .add-input {
+      flex: 1;
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 16px;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .add-input:focus { border-color: var(--accent-todo); }
+    .add-input::placeholder { color: var(--muted); }
+
+    .priority-sel {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 12px;
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .add-btn {
+      background: var(--accent-todo);
+      border: none;
+      border-radius: 10px;
+      padding: 11px 20px;
+      color: #fff;
+      font-family: var(--font-head);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: opacity 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .add-btn:hover { opacity: 0.88; }
+    .add-btn:active { transform: scale(0.97); }
+
+    /* ── Board ── */
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      padding: 0 32px 32px;
+      min-height: calc(100vh - 200px);
+    }
+
+    .col {
+      border-radius: 14px;
+      border: 0.5px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      min-height: 480px;
+      transition: border-color 0.2s;
+    }
+    .col.todo   { background: linear-gradient(180deg, rgba(108,108,255,0.06) 0%, var(--surface) 100%); }
+    .col.doing  { background: linear-gradient(180deg, rgba(245,166,35,0.06) 0%, var(--surface) 100%); }
+    .col.done   { background: linear-gradient(180deg, rgba(45,201,142,0.06) 0%, var(--surface) 100%); }
+    .col.drag-over { border-color: rgba(255,255,255,0.28); }
+
+    .col-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 16px 12px;
+      border-bottom: 0.5px solid var(--border);
+    }
+
+    .col-title {
+      font-family: var(--font-head);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .col-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .todo .col-dot  { background: var(--accent-todo); }
+    .doing .col-dot { background: var(--accent-doing); }
+    .done .col-dot  { background: var(--accent-done); }
+
+    .col-count {
+      font-size: 11px;
+      font-weight: 500;
+      background: var(--surface2);
+      border-radius: 20px;
+      padding: 2px 9px;
+      color: var(--muted);
+    }
+
+    .col-body {
+      flex: 1;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface2);
+      border-radius: 10px;
+      border: 0.5px solid var(--border);
+      padding: 12px 14px;
+      cursor: grab;
+      transition: transform 0.15s, border-color 0.15s, opacity 0.15s;
+      user-select: none;
+      animation: slideIn 0.2s ease;
+    }
+    .card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.14); }
+    .card.dragging { opacity: 0.3; transform: scale(0.97); cursor: grabbing; }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .card-title { font-size: 13px; font-weight: 500; line-height: 1.45; flex: 1; }
+
+    .card-actions {
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.15s;
+      flex-shrink: 0;
+    }
+    .card:hover .card-actions { opacity: 1; }
+
+    .card-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s, background 0.15s;
+    }
+    .card-btn:hover { color: var(--text); background: rgba(255,255,255,0.08); }
+    .card-btn.del:hover { color: #ff6b6b; }
+    .card-btn.checked { color: var(--accent-done); }
+
+    .card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    .priority-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .p-high { background: rgba(255,80,80,0.14); color: #ff7070; }
+    .p-med  { background: rgba(245,166,35,0.14); color: #f5a623; }
+    .p-low  { background: rgba(45,201,142,0.14); color: #2dc98e; }
+
+    .card-date { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+    .done-card { opacity: 0.5; }
+    .done-card .card-title { text-decoration: line-through; color: var(--muted); }
+
+    /* ── Empty State ── */
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      font-size: 12px;
+      gap: 8px;
+      padding: 32px 16px;
+      text-align: center;
+    }
+    .empty-icon { font-size: 28px; opacity: 0.3; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .board { grid-template-columns: 1fr; }
+      .topbar { flex-direction: column; gap: 10px; align-items: flex-start; }
+      .add-bar { flex-wrap: wrap; }
+      .add-input { min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="logo">Task<span>Flow</span></div>
+    <div class="stats">
+      <span>Total <strong class="stat-val" id="total-count">0</strong></span>
+      <span>Selesai <strong class="stat-val" id="done-count">0</strong></span>
+      <span>Progress <strong class="stat-val" id="progress-pct">0%</strong></span>
+    </div>
+  </div>
+
+  <!-- Progress Bar -->
+  <div class="progress-bar">
+    <div class="progress-fill" id="prog-fill" style="width:0%"></div>
+  </div>
+
+  <!-- Add Task Bar -->
+  <div class="add-bar">
+    <input class="add-input" id="new-task" placeholder="Tambah tugas baru..." maxlength="80" />
+    <select class="priority-sel" id="new-priority">
+      <option value="high">🔴 Tinggi</option>
+      <option value="med" selected>🟡 Sedang</option>
+      <option value="low">🟢 Rendah</option>
+    </select>
+    <button class="add-btn" onclick="addTask()">
+      <i class="ti ti-plus" aria-hidden="true"></i> Tambah
+    </button>
+  </div>
+
+  <!-- Kanban Board -->
+  <div class="board">
+    <div class="col todo" id="col-todo"
+      ondragover="onDragOver(event)"
+      ondrop="onDrop(event,'todo')"
+      ondragleave="onDragLeave(event)">
+      <div class="col-header">
+        <div class="col-title"><span class="col-dot"></span> To Do</div>
+        <span class="col-count" id="count-todo">0</span>
+      </div>
+      <div class="col-body" id="body-todo"></div>
+    </div>
+
+    <div class="col doing" id="col-doing"
+      ondragover="onDragOver(event)"
+      ondrop="onDrop(event,'doing')"
+      ondragleave="onDragLeave(event)">
+      <div class="col-header">
+        <div class="col-title"><span class="col-dot"></span> Sedang Dikerjakan</div>
+        <span class="col-count" id="count-doing">0</span>
+      </div>
+      <div class="col-body" id="body-doing"></div>
+    </div>
+
+    <div class="col done" id="col-done"
+      ondragover="onDragOver(event)"
+      ondrop="onDrop(event,'done')"
+      ondragleave="onDragLeave(event)">
+      <div class="col-header">
+        <div class="col-title"><span class="col-dot"></span> Selesai</div>
+        <span class="col-count" id="count-done">0</span>
+      </div>
+      <div class="col-body" id="body-done"></div>
+    </div>
+  </div>
+
+  <script>
+    // ── State ──
+    let tasks = JSON.parse(localStorage.getItem('taskflow') || 'null') || [
+      { id: 1, title: 'Desain wireframe halaman utama', priority: 'high', col: 'todo', date: today() },
+      { id: 2, title: 'Review brief dari klien', priority: 'med', col: 'doing', date: today() },
+      { id: 3, title: 'Setup repositori GitHub', priority: 'low', col: 'done', date: today() },
+      { id: 4, title: 'Buat komponen navigasi', priority: 'high', col: 'todo', date: today() },
+      { id: 5, title: 'Riset kompetitor', priority: 'med', col: 'doing', date: today() },
+    ];
+    let nextId = tasks.reduce((m, t) => Math.max(m, t.id), 0) + 1;
+    let dragId = null;
+
+    // ── Helpers ──
+    function today() {
+      return new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function priorityLabel(p) {
+      return { high: 'Tinggi', med: 'Sedang', low: 'Rendah' }[p];
+    }
+
+    function save() {
+      localStorage.setItem('taskflow', JSON.stringify(tasks));
+    }
+
+    // ── Render ──
+    function render() {
+      ['todo', 'doing', 'done'].forEach(col => {
+        const body = document.getElementById('body-' + col);
+        const items = tasks.filter(t => t.col === col);
+        document.getElementById('count-' + col).textContent = items.length;
+
+        if (!items.length) {
+          body.innerHTML = `<div class="empty-state">
+            <i class="ti ti-inbox empty-icon" aria-hidden="true"></i>
+            <span>Belum ada tugas</span>
+          </div>`;
+          return;
+        }
+
+        body.innerHTML = items.map(t => `
+          <div class="card${t.col === 'done' ? ' done-card' : ''}"
+            id="card-${t.id}"
+            draggable="true"
+            ondragstart="onDragStart(event,${t.id})"
+            ondragend="onDragEnd(event)">
+            <div class="card-top">
+              <div class="card-title">${escHtml(t.title)}</div>
+              <div class="card-actions">
+                <button class="card-btn${t.col === 'done' ? ' checked' : ''}"
+                  onclick="toggleDone(${t.id})"
+                  title="${t.col === 'done' ? 'Batalkan' : 'Selesaikan'}">
+                  <i class="ti ti-${t.col === 'done' ? 'circle-check' : 'circle'}" aria-hidden="true"></i>
+                </button>
+                <button class="card-btn del" onclick="deleteTask(${t.id})" title="Hapus">
+                  <i class="ti ti-trash" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+            <div class="card-meta">
+              <span class="priority-badge p-${t.priority}">${priorityLabel(t.priority)}</span>
+              <span class="card-date">${t.date}</span>
+            </div>
+          </div>
+        `).join('');
+      });
+
+      const total = tasks.length;
+      const done = tasks.filter(t => t.col === 'done').length;
+      const pct = total ? Math.round(done / total * 100) : 0;
+      document.getElementById('total-count').textContent = total;
+      document.getElementById('done-count').textContent = done;
+      document.getElementById('progress-pct').textContent = pct + '%';
+      document.getElementById('prog-fill').style.width = pct + '%';
+    }
+
+    // ── Actions ──
+    function addTask() {
+      const inp = document.getElementById('new-task');
+      const title = inp.value.trim();
+      if (!title) { inp.focus(); return; }
+      const priority = document.getElementById('new-priority').value;
+      tasks.unshift({ id: nextId++, title, priority, col: 'todo', date: today() });
+      inp.value = '';
+      inp.focus();
+      save();
+      render();
+    }
+
+    function deleteTask(id) {
+      tasks = tasks.filter(t => t.id !== id);
+      save();
+      render();
+    }
+
+    function toggleDone(id) {
+      const t = tasks.find(t => t.id === id);
+      if (!t) return;
+      t.col = t.col === 'done' ? 'todo' : 'done';
+      save();
+      render();
+    }
+
+    // ── Drag & Drop ──
+    function onDragStart(e, id) {
+      dragId = id;
+      setTimeout(() => {
+        const el = document.getElementById('card-' + id);
+        if (el) el.classList.add('dragging');
+      }, 0);
+      e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function onDragEnd() {
+      if (dragId) {
+        const el = document.getElementById('card-' + dragId);
+        if (el) el.classList.remove('dragging');
+      }
+      document.querySelectorAll('.col').forEach(c => c.classList.remove('drag-over'));
+    }
+
+    function onDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      e.currentTarget.classList.add('drag-over');
+    }
+
+    function onDragLeave(e) {
+      if (!e.currentTarget.contains(e.relatedTarget)) {
+        e.currentTarget.classList.remove('drag-over');
+      }
+    }
+
+    function onDrop(e, colName) {
+      e.preventDefault();
+      document.querySelectorAll('.col').forEach(c => c.classList.remove('drag-over'));
+      if (dragId === null) return;
+      const t = tasks.find(t => t.id === dragId);
+      if (t) t.col = colName;
+      dragId = null;
+      save();
+      render();
+    }
+
+    // ── Keyboard shortcut ──
+    document.getElementById('new-task').addEventListener('keydown', e => {
+      if (e.key === 'Enter') addTask();
+    });
+
+    // ── Init ──
+    render();
+  </script>
+</body>
+</html>
